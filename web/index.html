@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Decision Card — stress-test a decision before you commit</title>
+<meta name="description" content="An interactive tool that stress-tests a decision before you commit — size the undo cost, look at real numbers, invent a cheaper third option, attack your own answer, then get a one-screen card. Runs entirely in your browser." />
+<meta name="theme-color" content="#2f6f5e" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Decision Card" />
+<meta property="og:description" content="Stress-test a decision before you commit — then get a one-screen card: the call, how sure, what to do next, the case against, and what would flip it." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6f5e'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --ink: #16181d;
+    --muted: #5c6470;
+    --line: #e2e5ea;
+    --accent: #2f6f5e;
+    --accent-ink: #ffffff;
+    --accent-soft: #e8f1ee;
+    --warn: #a9541f;
+    --warn-soft: #f7ece2;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+    --radius: 14px;
+    --maxw: 720px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --ink: #e8ebf0;
+      --muted: #99a2b0;
+      --line: #262b34;
+      --accent: #5bb79c;
+      --accent-ink: #0f1115;
+      --accent-soft: #16241f;
+      --warn: #d99257;
+      --warn-soft: #2a2016;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  html[data-theme="light"] {
+    --bg:#f4f5f7;--panel:#fff;--ink:#16181d;--muted:#5c6470;--line:#e2e5ea;--accent:#2f6f5e;--accent-ink:#fff;--accent-soft:#e8f1ee;--warn:#a9541f;--warn-soft:#f7ece2;--shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06);
+  }
+  html[data-theme="dark"] {
+    --bg:#0f1115;--panel:#171a21;--ink:#e8ebf0;--muted:#99a2b0;--line:#262b34;--accent:#5bb79c;--accent-ink:#0f1115;--accent-soft:#16241f;--warn:#d99257;--warn-soft:#2a2016;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 28px 20px 80px; }
+  header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+  h1 { font-size: 22px; letter-spacing: -.01em; margin: 0; }
+  .sub { color: var(--muted); font-size: 14px; margin: 2px 0 20px; }
+  .toolbtns { display: flex; gap: 8px; }
+  .icon-btn {
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+    border-radius: 9px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--ink); border-color: var(--accent); }
+
+  /* stepper */
+  .steps { display: flex; gap: 4px; margin: 0 0 22px; }
+  .steps .st {
+    flex: 1; text-align: center; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); padding-bottom: 8px; border-bottom: 3px solid var(--line);
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .steps .st.done { color: var(--ink); border-color: var(--accent); }
+  .steps .st.active { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 24px 22px; display: none;
+  }
+  .panel.active { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .kicker { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .panel h2 { font-size: 19px; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .lead { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; }
+  label.f { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+  label.f .hint { font-weight: 400; color: var(--muted); }
+  textarea, input[type="text"] {
+    width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 12px; font: inherit; font-size: 15px; resize: vertical;
+  }
+  textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  textarea { min-height: 78px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+
+  .choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  @media (max-width: 560px) { .choice { grid-template-columns: 1fr; } }
+  .choice .opt {
+    border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; background: var(--bg);
+  }
+  .choice .opt:hover { border-color: var(--accent); }
+  .choice .opt.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .choice .opt .t { font-weight: 700; font-size: 15px; }
+  .choice .opt .d { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .choice .opt.warn.sel { border-color: var(--warn); background: var(--warn-soft); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 8px; font-size: 13.5px; margin: 16px 0 0; }
+  .note.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .note b { color: var(--ink); }
+
+  .nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+  button.btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    padding: 11px 18px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.btn:hover { border-color: var(--accent); }
+  button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.btn.primary:hover { filter: brightness(1.05); }
+  button.btn:disabled { opacity: .45; cursor: not-allowed; }
+  button.btn.ghost { background: transparent; }
+
+  /* confidence */
+  .conf-row { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .conf-val { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 22px; min-width: 62px; text-align: right; }
+
+  /* the card */
+  .card {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+    box-shadow: var(--shadow); padding: 22px 22px; margin-top: 4px;
+  }
+  .card .row { padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .card .row:last-child { border-bottom: none; }
+  .card .rlabel { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .card .rval { font-size: 16px; margin-top: 3px; white-space: pre-wrap; }
+  .card .call .rval { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .card .sure .rval { color: var(--accent); font-weight: 700; }
+  .meter { height: 8px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 8px; }
+  .meter > i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+  .badge.rev { background: var(--accent-soft); color: var(--accent); }
+  .badge.irr { background: var(--warn-soft); color: var(--warn); }
+  .exportbar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .foot { color: var(--muted); font-size: 12px; text-align: center; margin-top: 26px; }
+  .foot a { color: var(--muted); }
+  .empty { color: var(--muted); font-style: italic; }
+
+  @media print {
+    body { background: #fff; }
+    .steps, .nav, .exportbar, header.top .toolbtns, .foot .noprint, .panel:not(#panel-card) { display: none !important; }
+    .panel { box-shadow: none; border: none; padding: 0; }
+    .wrap { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Decision Card</h1>
+    </div>
+    <div class="toolbtns">
+      <button class="icon-btn" id="infoBtn" title="How this works">How it works</button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">◐ Theme</button>
+    </div>
+  </header>
+  <p class="sub">Stress-test a decision before you commit — then get a one-screen card.</p>
+
+  <div class="steps" id="steps"></div>
+
+  <!-- FRAME -->
+  <section class="panel" id="panel-frame" data-step="0">
+    <div class="kicker">Frame</div>
+    <h2>What are you actually deciding?</h2>
+    <p class="lead">State it as a real choice. "Should I X or Y", or a single call you're about to make.</p>
+    <label class="f">The decision</label>
+    <textarea id="decision" placeholder="e.g. Should we raise Big Dill wholesale MOQ from 12 to 24 units?"></textarea>
+    <div class="two">
+      <div><label class="f">Option A <span class="hint">(optional)</span></label><input type="text" id="optA" placeholder="Keep MOQ at 12" /></div>
+      <div><label class="f">Option B <span class="hint">(optional)</span></label><input type="text" id="optB" placeholder="Raise MOQ to 24" /></div>
+    </div>
+  </section>
+
+  <!-- GATE -->
+  <section class="panel" id="panel-gate" data-step="1">
+    <div class="kicker">Gate</div>
+    <h2>How hard is this to undo?</h2>
+    <p class="lead">Size the undo cost first. Reversible calls deserve speed; irreversible ones earn the full, cold pass.</p>
+    <div class="choice" id="revChoice">
+      <div class="opt" data-val="reversible">
+        <div class="t">Reversible</div>
+        <div class="d">Fixable in days or weeks. Low cost to back out.</div>
+      </div>
+      <div class="opt warn" data-val="irreversible">
+        <div class="t">Irreversible</div>
+        <div class="d">Money committed, public promise, or reputation on the line.</div>
+      </div>
+    </div>
+    <label class="f">Why — what makes it that? <span class="hint">(the real undo cost)</span></label>
+    <textarea id="undoNote" placeholder="e.g. Wholesale contracts lock pricing for 12 months; hard to walk back without goodwill damage."></textarea>
+    <div class="note" id="gateNote" style="display:none"></div>
+  </section>
+
+  <!-- LOOK -->
+  <section class="panel" id="panel-look" data-step="2">
+    <div class="kicker">Look</div>
+    <h2>Get real numbers before you reason.</h2>
+    <p class="lead">If a fact lives in your data, history, or repo — go read it. Separate what you actually know from what you're guessing.</p>
+    <label class="f">Facts I actually have <span class="hint">(sourced — data, history, real numbers)</span></label>
+    <textarea id="facts" placeholder="e.g. Last 90 days: 38% of wholesale orders were exactly 12 units. Reorder rate 61%."></textarea>
+    <label class="f">Things I'm guessing / need to check <span class="hint">(name the test that would settle it)</span></label>
+    <textarea id="unknowns" placeholder="e.g. GUESS: bigger MOQ won't scare small shops. TEST: email 20 accounts, or pilot with 5."></textarea>
+    <div class="note"><b>Rule:</b> a number you can look up beats a number you argue toward. Turn a guess into a test wherever you can.</div>
+  </section>
+
+  <!-- RESHAPE -->
+  <section class="panel" id="panel-reshape" data-step="3">
+    <div class="kicker">Reshape</div>
+    <h2>Invent a cheaper third option.</h2>
+    <p class="lead">Before choosing A or B, find option C: the smaller first step that tests the core assumption — or a reversible pilot of an irreversible plan.</p>
+    <label class="f">Option C — the cheaper test / reversible pilot</label>
+    <textarea id="optC" placeholder="e.g. Raise MOQ to 24 for NEW accounts only, keep existing at 12 for one quarter; measure churn."></textarea>
+    <div class="note">The best third option turns an irreversible bet into a reversible experiment. If you found one, it's usually your <b>DO THIS NEXT</b>.</div>
+  </section>
+
+  <!-- ATTACK -->
+  <section class="panel" id="panel-attack" data-step="4">
+    <div class="kicker">Attack</div>
+    <h2>Try to kill your own answer.</h2>
+    <p class="lead">Challenge the requirement. Check the arithmetic. Reverse the deal — would you take the other side? Only what survives this is worth acting on.</p>
+    <div class="note warn" id="coldPass" style="display:none"><b>Irreversible → cold-adversary pass:</b> argue the opposite case as if it were yours, with no stated preference. If your answer only wins when you're rooting for it, it isn't ready.</div>
+    <label class="f">The strongest case against your answer <span class="hint">(stated fairly)</span></label>
+    <textarea id="caseAgainst" placeholder="e.g. Small shops are 38% of volume and most order exactly 12; a 24 MOQ could quietly lose the long tail that drives reorders."></textarea>
+    <label class="f">Does your answer survive?</label>
+    <div class="choice" id="survChoice">
+      <div class="opt" data-val="survives"><div class="t">It survives</div><div class="d">The attack didn't break it.</div></div>
+      <div class="opt" data-val="modified"><div class="t">It changed</div><div class="d">The attack reshaped the call.</div></div>
+    </div>
+  </section>
+
+  <!-- CARD -->
+  <section class="panel" id="panel-card" data-step="5">
+    <div class="kicker">Card</div>
+    <h2>Your decision card</h2>
+    <p class="lead">Answer first. A real confidence number, and the case against — in one screen.</p>
+
+    <label class="f">The call <span class="hint">(one sentence)</span></label>
+    <textarea id="theCall" placeholder="e.g. Pilot MOQ 24 on new accounts only this quarter; don't touch existing accounts yet."></textarea>
+
+    <label class="f">How sure — and why</label>
+    <div class="conf-row">
+      <input type="range" id="conf" min="0" max="100" value="60" step="5" />
+      <span class="conf-val"><span id="confNum">60</span>%</span>
+    </div>
+    <textarea id="confWhy" placeholder="Why that number — what you know and what you don't."></textarea>
+
+    <label class="f">Do this next <span class="hint">(the single next action — a commit, a test, a message)</span></label>
+    <textarea id="doNext" placeholder="Auto-suggested from your Option C — edit freely."></textarea>
+
+    <label class="f">This flips if <span class="hint">(the 1–3 things that would change the answer)</span></label>
+    <textarea id="flipsIf" placeholder="e.g. If the new-account pilot shows >10% drop in first-order conversion."></textarea>
+
+    <hr style="border:none;border-top:1px solid var(--line);margin:22px 0" />
+    <div class="card" id="cardOut"></div>
+
+    <div class="exportbar">
+      <button class="btn primary" id="copyBtn">Copy card</button>
+      <button class="btn" id="mdBtn">Download .md</button>
+      <button class="btn" id="printBtn">Print / Save PDF</button>
+      <button class="btn ghost" id="resetBtn">Start over</button>
+    </div>
+  </section>
+
+  <div class="nav">
+    <button class="btn ghost" id="backBtn">← Back</button>
+    <button class="btn primary" id="nextBtn">Next →</button>
+  </div>
+
+  <p class="foot">
+    <span class="noprint">Adapted from the <a href="https://github.com/andrewluxem/decision-card" target="_blank" rel="noopener">decision-card</a> skill. Runs entirely in your browser — nothing is sent anywhere, nothing is stored.</span>
+  </p>
+</div>
+
+<!-- info modal -->
+<div id="infoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;max-width:560px;width:100%;padding:24px;box-shadow:var(--shadow);max-height:85vh;overflow:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;font-size:18px;">The loop</h2>
+      <button class="icon-btn" id="infoClose">Close</button>
+    </div>
+    <p style="color:var(--muted);font-size:14px;">Five moves. Each one earns the next.</p>
+    <ol style="font-size:14.5px;line-height:1.6;padding-left:20px;">
+      <li><b>Gate</b> — size the undo cost first. Reversible gets speed; irreversible gets the full pass.</li>
+      <li><b>Look</b> — read the real numbers instead of reasoning around them. Turn guesses into tests.</li>
+      <li><b>Reshape</b> — invent a cheaper third option before choosing A or B.</li>
+      <li><b>Attack</b> — try to kill your own answer. Reverse the deal. Only what survives ships.</li>
+      <li><b>Card</b> — answer first, a real confidence number, and the case against — on one screen.</li>
+    </ol>
+    <p style="color:var(--muted);font-size:13px;">Nothing here fires on its own, fetches URLs, or stores your data. It's a thinking tool, not an oracle.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var PANELS = ["frame", "gate", "look", "reshape", "attack", "card"];
+  var LABELS = ["Frame", "Gate", "Look", "Reshape", "Attack", "Card"];
+  var step = 0;
+  var state = {
+    decision:"", optA:"", optB:"", reversibility:"", undoNote:"",
+    facts:"", unknowns:"", optC:"", caseAgainst:"", survives:"",
+    theCall:"", conf:60, confWhy:"", doNext:"", flipsIf:""
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---- theme ----
+  var themeBtn = $("themeBtn");
+  themeBtn.onclick = function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : cur === "light" ? "dark"
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", next);
+  };
+
+  // ---- info modal ----
+  $("infoBtn").onclick = function () { $("infoModal").style.display = "flex"; };
+  $("infoClose").onclick = function () { $("infoModal").style.display = "none"; };
+  $("infoModal").onclick = function (e) { if (e.target === $("infoModal")) $("infoModal").style.display = "none"; };
+
+  // ---- build stepper ----
+  var stepsEl = $("steps");
+  LABELS.forEach(function (l, i) {
+    var d = document.createElement("div");
+    d.className = "st"; d.textContent = l; d.setAttribute("data-i", i);
+    d.onclick = function () { if (i <= maxReached) go(i); };
+    stepsEl.appendChild(d);
+  });
+  var maxReached = 0;
+
+  // ---- bind simple text fields ----
+  function bind(id, key) {
+    var el = $(id);
+    if (!el) return;
+    el.value = state[key];
+    el.addEventListener("input", function () { state[key] = el.value; });
+  }
+  bind("decision","decision"); bind("optA","optA"); bind("optB","optB");
+  bind("undoNote","undoNote"); bind("facts","facts"); bind("unknowns","unknowns");
+  bind("optC","optC"); bind("caseAgainst","caseAgainst");
+  bind("theCall","theCall"); bind("confWhy","confWhy"); bind("doNext","doNext"); bind("flipsIf","flipsIf");
+
+  // ---- choices ----
+  function wireChoice(containerId, key, onChange) {
+    var c = $(containerId);
+    c.querySelectorAll(".opt").forEach(function (opt) {
+      opt.onclick = function () {
+        c.querySelectorAll(".opt").forEach(function (o) { o.classList.remove("sel"); });
+        opt.classList.add("sel");
+        state[key] = opt.getAttribute("data-val");
+        if (onChange) onChange(state[key]);
+      };
+    });
+  }
+  wireChoice("revChoice", "reversibility", function (v) {
+    var n = $("gateNote");
+    n.style.display = "block";
+    if (v === "irreversible") {
+      n.className = "note warn";
+      n.innerHTML = "<b>Irreversible.</b> Slow down. You'll get a cold-adversary pass at the Attack step, and your confidence should carry the weight of that.";
+    } else {
+      n.className = "note";
+      n.innerHTML = "<b>Reversible.</b> Bias toward action — the cheapest way to learn is often to try the smaller version and watch.";
+    }
+    $("coldPass").style.display = v === "irreversible" ? "block" : "none";
+  });
+  wireChoice("survChoice", "survives");
+
+  // ---- confidence ----
+  var conf = $("conf");
+  conf.addEventListener("input", function () {
+    state.conf = parseInt(conf.value, 10);
+    $("confNum").textContent = state.conf;
+  });
+
+  // ---- navigation ----
+  function go(i) {
+    step = i;
+    if (i > maxReached) maxReached = i;
+    PANELS.forEach(function (p, idx) {
+      $("panel-" + p).classList.toggle("active", idx === i);
+    });
+    stepsEl.querySelectorAll(".st").forEach(function (s, idx) {
+      s.classList.toggle("active", idx === i);
+      s.classList.toggle("done", idx < maxReached || idx < i);
+    });
+    $("backBtn").style.visibility = i === 0 ? "hidden" : "visible";
+    $("nextBtn").textContent = i === 4 ? "Build the card →" : (i === 5 ? "Done" : "Next →");
+    $("nextBtn").style.visibility = i === 5 ? "hidden" : "visible";
+    if (i === 5) { prefillCard(); renderCard(); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  $("nextBtn").onclick = function () { if (step < 5) go(step + 1); };
+  $("backBtn").onclick = function () { if (step > 0) go(step - 1); };
+
+  // ---- card ----
+  function prefillCard() {
+    if (!state.doNext && state.optC) { state.doNext = state.optC; $("doNext").value = state.optC; }
+    if (!state.theCall && state.decision) { /* leave blank — the call is a judgment */ }
+    if (!state.confWhy && (state.facts || state.unknowns)) {
+      // gentle scaffold, editable
+    }
+  }
+  function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function val(s, placeholder){ return s && s.trim() ? esc(s) : '<span class="empty">'+placeholder+'</span>'; }
+
+  function renderCard() {
+    var badge = state.reversibility === "irreversible"
+      ? '<span class="badge irr">Irreversible</span>'
+      : state.reversibility === "reversible" ? '<span class="badge rev">Reversible</span>' : '';
+    var c = $("cardOut");
+    c.innerHTML =
+      (state.decision ? '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+esc(state.decision)+' &nbsp;'+badge+'</div>' : (badge?'<div style="margin-bottom:10px;">'+badge+'</div>':'')) +
+      '<div class="row call"><div class="rlabel">The call</div><div class="rval">'+val(state.theCall,"State the call in one sentence.")+'</div></div>' +
+      '<div class="row sure"><div class="rlabel">How sure</div><div class="rval">~'+state.conf+'% — '+val(state.confWhy,"why that number")+'</div>'+
+        '<div class="meter"><i style="width:'+state.conf+'%"></i></div></div>' +
+      '<div class="row"><div class="rlabel">Do this next</div><div class="rval">'+val(state.doNext,"the single next action")+'</div></div>' +
+      '<div class="row"><div class="rlabel">The case against</div><div class="rval">'+val(state.caseAgainst,"the strongest opposing argument, stated fairly")+'</div></div>' +
+      '<div class="row"><div class="rlabel">This flips if</div><div class="rval">'+val(state.flipsIf,"the 1–3 things that would change the answer")+'</div></div>';
+  }
+  ["theCall","confWhy","doNext","flipsIf"].forEach(function (id) {
+    $(id).addEventListener("input", renderCard);
+  });
+  conf.addEventListener("input", renderCard);
+
+  function cardMarkdown() {
+    return [
+      "**THE CALL:** " + (state.theCall || "—"),
+      "**HOW SURE:** ~" + state.conf + "% — " + (state.confWhy || "—"),
+      "**DO THIS NEXT:** " + (state.doNext || "—"),
+      "**THE CASE AGAINST:** " + (state.caseAgainst || "—"),
+      "**THIS FLIPS IF:** " + (state.flipsIf || "—")
+    ].join("\n");
+  }
+
+  $("copyBtn").onclick = function () {
+    var txt = cardMarkdown();
+    function done(){ var b=$("copyBtn"); var o=b.textContent; b.textContent="Copied ✓"; setTimeout(function(){b.textContent=o;},1400); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, function(){ fallbackCopy(txt); done(); });
+    } else { fallbackCopy(txt); done(); }
+  };
+  function fallbackCopy(txt){ var ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); }
+
+  $("mdBtn").onclick = function () {
+    var title = (state.decision || "decision").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"-").slice(0,50) || "decision";
+    var body = "# Decision Card\n\n> " + (state.decision || "") + "\n\n" + cardMarkdown() + "\n";
+    var blob = new Blob([body], { type: "text/markdown" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "decision-card-" + title + ".md";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  };
+
+  $("printBtn").onclick = function () { renderCard(); window.print(); };
+
+  $("resetBtn").onclick = function () {
+    if (!confirm("Clear this decision and start over?")) return;
+    Object.keys(state).forEach(function (k) { state[k] = (k === "conf") ? 60 : ""; });
+    state.conf = 60;
+    document.querySelectorAll("textarea, input[type=text]").forEach(function (e) { e.value = ""; });
+    conf.value = 60; $("confNum").textContent = 60;
+    document.querySelectorAll(".opt.sel").forEach(function (o) { o.classList.remove("sel"); });
+    $("gateNote").style.display = "none"; $("coldPass").style.display = "none";
+    maxReached = 0; go(0);
+  };
+
+  go(0);
+})();
+</script>
+</body>
+</html>
