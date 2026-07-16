@@ -1,0 +1,14 @@
+{
+  "name": "decision-card",
+  "owner": { "name": "Andrew Luxem" },
+  "description": "decision-card — stress-test a decision, get an answer-first card",
+  "plugins": [
+    {
+      "name": "decision-card",
+      "source": "./",
+      "description": "Five-step decision loop ending in a one-screen card: GATE, LOOK, RESHAPE, ATTACK, CARD. Explicit-invocation only, version-pinned, no auto-update.",
+      "category": "productivity",
+      "tags": ["decision-making", "mental-models", "anti-sycophancy"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "decision-card",
+  "version": "0.1.0",
+  "description": "Stress-test a decision, then get a one-screen card: the call, how sure, what to do next, the case against, and what would flip it. Explicit-invocation only — no self-firing, no remote fetch, no auto-update.",
+  "author": { "name": "Andrew Luxem" },
+  "homepage": "https://github.com/andrewluxem/decision-card",
+  "repository": "https://github.com/andrewluxem/decision-card",
+  "license": "MIT",
+  "keywords": ["decision-making", "mental-models", "anti-sycophancy", "first-principles", "thinking"]
+}
