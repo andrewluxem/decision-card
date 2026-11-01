@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/banner.svg" alt="decision-card: A static Claude skill that stress-tests a decision and returns an answer-first card. Explicit-invocation only: no self-firing, no remote fetch, no auto-update." width="100%"></p>
+<p align="center"><img src="docs/banner.svg" alt="decision-card: A static Claude skill that stress-tests a decision and returns an answer-first card. Explicit-invocation only: no self-firing, no remote fetch, no auto-update."></p>
 
 # decision-card
 
