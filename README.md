@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.svg" alt="decision-card: A static Claude skill that stress-tests a decision and returns an answer-first card. Explicit-invocation only: no self-firing, no remote fetch, no auto-update." width="100%"></p>
+
 # decision-card
 
 A small, static Claude skill that stress-tests a decision before you commit to it — then hands you a one-screen card: the call, how sure it is, what to do next, the best case against, and what would flip it.
